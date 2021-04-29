@@ -11,38 +11,37 @@ import (
 type H map[string]interface{}
 
 type Context struct {
-	Writer http.ResponseWriter
+	Writer  http.ResponseWriter
 	Request *http.Request
 
-	Path string
+	Path   string
 	Method string
 	Params map[string]string
-	Keys map[string]interface{}
+	Keys   map[string]interface{}
 
 	StatusCode int
 
-
 	handlers []HandlerFunc
-	index int8
+	index    int8
 
-	mu  sync.RWMutex
+	mu sync.RWMutex
 }
 
 const abortIndex = math.MaxInt8 / 2
 
 func newContext(writer http.ResponseWriter, request *http.Request) *Context {
 	return &Context{
-		Writer: writer,
+		Writer:  writer,
 		Request: request,
-		Path: request.URL.Path,
-		Method: request.Method,
-		index: -1,
+		Path:    request.URL.Path,
+		Method:  request.Method,
+		index:   -1,
 	}
 }
 
-func (c *Context) Next()  {
+func (c *Context) Next() {
 	c.index++
-	for c.index < int8(len(c.handlers)){
+	for c.index < int8(len(c.handlers)) {
 		c.handlers[c.index](c)
 		c.index++
 	}
@@ -53,7 +52,7 @@ func (c *Context) Fail(code int, err string) {
 	c.JSON(code, H{"message": err})
 }
 
-func (c *Context) PostForm(key string) string{
+func (c *Context) PostForm(key string) string {
 	return c.Request.FormValue(key)
 }
 
@@ -66,22 +65,22 @@ func (c *Context) Status(code int) {
 	c.Writer.WriteHeader(code)
 }
 
-func (c *Context) SetHeader(key string,value string) {
-	c.Writer.Header().Set(key,value)
+func (c *Context) SetHeader(key string, value string) {
+	c.Writer.Header().Set(key, value)
 }
 
-func (c *Context) String(code int,format string,value...interface{}){
-	c.SetHeader("Content-Type","text/plain")
+func (c *Context) String(code int, format string, value ...interface{}) {
+	c.SetHeader("Content-Type", "text/plain")
 	c.Status(code)
-	c.Writer.Write([]byte(fmt.Sprintf(format,value...)))
+	c.Writer.Write([]byte(fmt.Sprintf(format, value...)))
 }
 
-func (c *Context) JSON(code int,obj interface{}){
-	c.SetHeader("Content-Type","application/json")
+func (c *Context) JSON(code int, obj interface{}) {
+	c.SetHeader("Content-Type", "application/json")
 	c.Status(code)
 	encoder := json.NewEncoder(c.Writer)
-	if err := encoder.Encode(obj); err != nil{
-		http.Error(c.Writer,err.Error(),500)
+	if err := encoder.Encode(obj); err != nil {
+		http.Error(c.Writer, err.Error(), 500)
 	}
 }
 
@@ -97,10 +96,11 @@ func (c *Context) HTML(code int, html string) {
 }
 
 func (c *Context) Param(key string) string {
-	value,_ := c.Params[key]
+	value, _ := c.Params[key]
 	return value
 }
 
+// FIXME:有些java风，包装过度。
 func (c *Context) Abort() {
 	c.index = abortIndex
 }
@@ -109,23 +109,23 @@ func (c *Context) IsAborted() bool {
 	return c.index >= abortIndex
 }
 
-func (c *Context) AbortWithStatusJSON(code int,jsonObj interface{}){
+func (c *Context) AbortWithStatusJSON(code int, jsonObj interface{}) {
 	c.Abort()
-	c.JSON(code,jsonObj)
+	c.JSON(code, jsonObj)
 }
 
-func (c *Context) Set(key string,value interface{})  {
+func (c *Context) Set(key string, value interface{}) {
 	c.mu.Lock()
-	if c.Keys == nil{
+	if c.Keys == nil {
 		c.Keys = make(map[string]interface{})
 	}
 	c.Keys[key] = value
 	c.mu.Unlock()
 }
 
-func (c *Context) Get(key string)(value interface{},exists bool){
+func (c *Context) Get(key string) (value interface{}, exists bool) {
 	c.mu.RLock()
-	value,exists = c.Keys[key]
+	value, exists = c.Keys[key]
 	c.mu.RUnlock()
 	return
 }

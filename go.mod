@@ -2,6 +2,7 @@ module gin-my
 
 go 1.16
 
+// FIXME:这都留的啥？没用就删掉.
 require (
 	gin v0.0.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible

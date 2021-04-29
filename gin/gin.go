@@ -3,11 +3,13 @@ package gin
 import (
 	"log"
 	"net/http"
+	"strings"
 )
+
 
 type HandlerFunc func(*Context)
 
-//FIXME:多个结构体别这么定义吧，不太美观。
+
 type (
 	RouterGroup struct {
 		prefix      string
@@ -17,22 +19,21 @@ type (
 	Engine struct {
 		router *router
 		*RouterGroup
-		// FIXME:这写法蛮奇怪的，会有更好的方法嘛？
-		//groups []*RouterGroup
+		groups []*RouterGroup
 
 	}
 )
 
-func Default() *Engine {
+func Default() *Engine{
 	engine := New()
-	engine.Use(Logger(), Recovery())
+	engine.Use(Logger(),Recovery())
 	return engine
 }
 
 func New() *Engine {
-	engine := &Engine{router: newRouter()}
+	engine := &Engine{router: newRouter(),}
 	engine.RouterGroup = &RouterGroup{engine: engine}
-	//	engine.groups = []*RouterGroup{engine.RouterGroup}
+	engine.groups = []*RouterGroup{engine.RouterGroup}
 	return engine
 }
 
@@ -42,7 +43,7 @@ func (r *RouterGroup) Group(prefix string) *RouterGroup {
 		prefix: r.prefix + prefix,
 		engine: engine,
 	}
-	//	engine.groups = append(engine.groups, newGroup)
+	engine.groups = append(engine.groups, newGroup)
 	return newGroup
 }
 
@@ -73,14 +74,14 @@ func (r *RouterGroup) Use(middlewares ...HandlerFunc) {
 }
 
 func (e *Engine) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	//	var middlewares []HandlerFunc
-	//	for _, group := range e.groups {
-	//		if strings.HasPrefix(request.URL.Path, group.prefix) {
-	//			middlewares = append(middlewares, group.middlewares...)
-	//		}
-	//	}
+	var middlewares []HandlerFunc
+	for _, group := range e.groups {
+		if strings.HasPrefix(request.URL.Path, group.prefix) {
+			middlewares = append(middlewares, group.middlewares...)
+		}
+	}
 	c := newContext(writer, request)
-	//	c.handlers = middlewares
+	c.handlers = middlewares
 	e.router.handle(c)
 }
 
